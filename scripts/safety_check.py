@@ -79,6 +79,8 @@ def check_safebrowsing():
 def norm_terms(t):
     t = re.sub(r"<script.*?</script>|<style.*?</style>", "", t, flags=re.S)
     t = re.sub(r"<[^>]+>", " ", t)
+    t = re.sub(r"\d{4}-\d\d-\d\d[ T]\d\d:\d\d(:\d\d)?( ?UTC)?", "", t)  # footer build timestamp changes every deploy
+    t = re.sub(r"\d[\d,]*\+ pages", "N+ pages", t)  # growing page count on the sponsor page
     t = re.sub(r"(Last updated|Updated|Effective)[^.]{0,40}\d{4}", "", t, flags=re.I)
     return re.sub(r"\s+", " ", t).strip()
 
