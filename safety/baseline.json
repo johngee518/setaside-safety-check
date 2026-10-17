@@ -1,0 +1,48 @@
+{
+  "sponsor_prices": [
+    "$1,125",
+    "$1,200",
+    "$1,300",
+    "$1,500",
+    "$1,875",
+    "$120",
+    "$130",
+    "$150",
+    "$190",
+    "$199",
+    "$240",
+    "$260",
+    "$300",
+    "$349",
+    "$375",
+    "$420",
+    "$455",
+    "$50",
+    "$525",
+    "$599",
+    "$60",
+    "$60,",
+    "$600",
+    "$65",
+    "$655",
+    "$720",
+    "$75",
+    "$780",
+    "$900",
+    "$95",
+    "$99",
+    "$999"
+  ],
+  "stripe_links": [
+    "https://buy.stripe.com/6oU5kD9O3gXnaPa1Sn0ZW03",
+    "https://buy.stripe.com/aFacN5d0f9uV6yU68D0ZW0a",
+    "https://buy.stripe.com/eVq5kDd0fePf3mI1Sn0ZW06",
+    "https://buy.stripe.com/eVqbJ12lB8qR1eAeF90ZW09"
+  ],
+  "kit_forms": [
+    "10050814"
+  ],
+  "terms_sha256": "93add92f3402bb66e55543c5985225439bdc4c23a4c2ca4e16dd26eeebd2c415",
+  "privacy_sha256": "d97b3b30ad6092ba98f709737eb1d88e42ce89eef1742a985b11eb9b150e9642",
+  "sponsor_text_sha256": "63dbb99a5b9c07fd255927d5bae74e628b47eb8773ab2001984e4edb7e36a776"
+}
