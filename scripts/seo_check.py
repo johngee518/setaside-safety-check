@@ -18,7 +18,7 @@ import urllib.request, urllib.error, urllib.parse
 from html.parser import HTMLParser
 import xml.etree.ElementTree as ET
 
-UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36 JRG-seo-check (+https://github.com/johngee518/jrg-safety-check)"  # same browser-style UA as check.py; Cloudflare 403s bot-style UAs from Actions runners
+UA = "SetAsideSignal-SEOCheck/1.0 (+https://github.com/johngee518/setaside-safety-check)"  # plain non-browser UA: Cloudflare challenges browser-style bot UAs from CI IPs
 CTX = ssl.create_default_context()
 
 
