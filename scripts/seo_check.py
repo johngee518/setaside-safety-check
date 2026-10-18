@@ -18,7 +18,7 @@ import urllib.request, urllib.error, urllib.parse
 from html.parser import HTMLParser
 import xml.etree.ElementTree as ET
 
-UA = "SetAsideSignal-SEOCheck/1.0 (+https://github.com/johngee518/setaside-safety-check)"  # plain non-browser UA: Cloudflare challenges browser-style bot UAs from CI IPs
+UA = "SetAsideSignal-SafetyCheck/1.0 (+https://setasidesignal.net)"  # identical to safety_check.py UA (Cloudflare challenged other UAs from Actions runners)
 CTX = ssl.create_default_context()
 
 
@@ -33,7 +33,7 @@ def fetch(url, timeout=15, follow=True, method="GET"):
     cur = url
     opener = urllib.request.build_opener(NoRedirect, urllib.request.HTTPSHandler(context=CTX))
     for _ in range(10):
-        req = urllib.request.Request(cur, method=method, headers={"User-Agent": UA, "Accept-Encoding": "gzip"})  # no browser-style Accept: Cloudflare serves managed challenges to HTML-accepting bots
+        req = urllib.request.Request(cur, method=method, headers={"User-Agent": UA})  # same request shape as safety_check.py
         try:
             r = opener.open(req, timeout=timeout)
             status, headers, body = r.status, r.headers, r.read()
