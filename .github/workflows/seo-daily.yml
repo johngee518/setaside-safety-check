@@ -18,9 +18,7 @@ jobs:
       SITE_URL: ${{ vars.SITE_URL || 'https://setasidesignal.net' }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
+      # System python3 (like safety-check.yml): Cloudflare challenged requests from the setup-python toolcache build.
       - name: Run SEO check
         id: seo
         continue-on-error: true
