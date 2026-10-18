@@ -13,7 +13,8 @@ STRIPE_IDS = {"6oU5kD9O3gXnaPa1Sn0ZW03", "aFacN5d0f9uV6yU68D0ZW0a", "eVq5kDd0feP
 KIT_FORM = "10050814"
 ALLOW_DOMAINS = {"setasidesignal.net", "sam.gov", "buy.stripe.com", "app.kit.com", "kit.com", "adssettings.google.com",
                  "policies.google.com", "static.cloudflareinsights.com", "schema.org", "www.w3.org", "fonts.googleapis.com",
-                 "fonts.gstatic.com", "certifications.sba.gov", "maps.certify.sba.gov", "www.acquisition.gov", "www.apexaccelerators.us", "www.gsa.gov", "pagead2.googlesyndication.com", "www.sba.gov", "sba.gov", "www.google.com"}
+                 "fonts.gstatic.com", "certifications.sba.gov", "maps.certify.sba.gov", "www.acquisition.gov", "www.apexaccelerators.us", "www.gsa.gov", "pagead2.googlesyndication.com", "www.sba.gov", "sba.gov", "www.google.com",
+                 "developers.google.com"}  # Google API Services User Data Policy link (privacy page, accounts section)
 HEADERS = {"content-security-policy": None, "strict-transport-security": None, "x-content-type-options": "nosniff",
            "referrer-policy": None, "permissions-policy": None}
 UA = {"User-Agent": "SetAsideSignal-SafetyCheck/1.0 (+https://setasidesignal.net)"}

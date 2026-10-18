@@ -42,7 +42,7 @@
   "kit_forms": [
     "10050814"
   ],
-  "terms_sha256": "5a9a5cd0dc2c4333b9baeafad0921f0445f84debf38dbb86f5f301e4247c19a7",
-  "privacy_sha256": "588b1c7fced491e4612a68cf54a65b3f58849d4e1df93fa2480ba73efbcb6fc2",
-  "sponsor_text_sha256": "d5e13429d24aab2581961e43a48c4c261b47e25e7b3693ec37e8ee179d5647f8"
+  "terms_sha256": "9c9e3b1046c5f7b6edf3459a770fd3309321372f2deb47772b6817d0855ef105",
+  "privacy_sha256": "2d7aab64ca72777d7623e13a81968bdb8c3fe6e73d009410be83a72393c78d1f",
+  "sponsor_text_sha256": "63f6e83991d8adb197c743a8aedd7b8f00b11896abb7daca4a385977e8bbc248"
 }
