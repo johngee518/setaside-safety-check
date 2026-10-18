@@ -31,7 +31,7 @@ def fetch(url, timeout=15, follow=True, method="GET"):
     """Return dict(status, url, headers, body, error, redirects)."""
     redirects = []
     cur = url
-    opener = urllib.request.build_opener(NoRedirect, urllib.request.HTTPSHandler(context=CTX))
+    opener = urllib.request.build_opener(NoRedirect)  # default HTTPS context (same TLS/ALPN as safety_check.py; a custom context got Cloudflare-challenged)
     for _ in range(10):
         req = urllib.request.Request(cur, method=method, headers={"User-Agent": UA})  # same request shape as safety_check.py
         try:
