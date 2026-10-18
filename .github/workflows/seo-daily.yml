@@ -13,7 +13,7 @@ concurrency: { group: seo-daily, cancel-in-progress: false }
 jobs:
   seo:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 35  # 1.5 s pacing: ~200 sequential requests ≈ 5–8 min
     env:
       SITE_URL: ${{ vars.SITE_URL || 'https://setasidesignal.net' }}
     steps:
@@ -24,7 +24,7 @@ jobs:
         continue-on-error: true
         run: |
           set -o pipefail
-          python3 scripts/seo_check.py "$SITE_URL" --max-pages 25 --max-links 150 \
+          python3 scripts/seo_check.py "$SITE_URL" --max-pages 25 --max-links 150 --delay 1.5 \
             --json seo-report.json | tee seo-report.txt
       - name: Job summary
         if: always()

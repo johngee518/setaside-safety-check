@@ -11,15 +11,22 @@ noindex, JSON-LD validity/types, image alt text, Open Graph/Twitter tags, viewpo
 lang, favicon, hreflang (if present), real 404 status, broken internal links,
 www/apex canonical host, http->https redirect.
 
-Exit code: 0 = no FAIL, 1 = at least one FAIL, 2 = could not run.
+Requests are sequential with DELAY (1.5 s) before each one; the first HTTP 403 or cf-mitigated
+response stops the run at once (exit 3) instead of hammering the site.
+
+Exit code: 0 = no FAIL, 1 = at least one FAIL, 2 = could not run, 3 = Cloudflare challenge/403 (stopped early).
 """
-import argparse, json, re, sys, ssl, gzip, time
+import argparse, json, re, sys, gzip, time
 import urllib.request, urllib.error, urllib.parse
 from html.parser import HTMLParser
 import xml.etree.ElementTree as ET
 
 UA = "SetAsideSignal-SafetyCheck/1.0 (+https://setasidesignal.net)"  # identical to safety_check.py UA (Cloudflare challenged other UAs from Actions runners)
-CTX = ssl.create_default_context()
+DELAY = 1.5  # seconds before each request (sequential, no parallelism); --delay overrides
+
+
+class Challenged(Exception):
+    """Cloudflare answered 403 or a cf-mitigated challenge: stop at once instead of hammering the site."""
 
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -33,6 +40,7 @@ def fetch(url, timeout=15, follow=True, method="GET"):
     cur = url
     opener = urllib.request.build_opener(NoRedirect)  # default HTTPS context (same TLS/ALPN as safety_check.py; a custom context got Cloudflare-challenged)
     for _ in range(10):
+        time.sleep(DELAY)
         req = urllib.request.Request(cur, method=method, headers={"User-Agent": UA})  # same request shape as safety_check.py
         try:
             r = opener.open(req, timeout=timeout)
@@ -45,6 +53,8 @@ def fetch(url, timeout=15, follow=True, method="GET"):
                 body = b""
         except Exception as e:
             return {"status": None, "url": cur, "headers": {}, "body": "", "error": str(e), "redirects": redirects}
+        if status == 403 or (headers and headers.get("cf-mitigated")):
+            raise Challenged(f"{cur} -> HTTP {status}, cf-mitigated={headers.get('cf-mitigated')}, cf-ray={headers.get('cf-ray')}")
         if headers.get("Content-Encoding") == "gzip" and body:
             try:
                 body = gzip.decompress(body)
@@ -302,8 +312,18 @@ def main():
     ap.add_argument("--json", help="write full results to this JSON file")
     ap.add_argument("--warn-only", action="store_true", help="always exit 0")
     ap.add_argument("--skip-http", action="store_true", help="skip the http:// -> https:// check (port 80 blocked)")
+    ap.add_argument("--delay", type=float, default=DELAY, help="seconds to wait before each request (default 1.5)")
     a = ap.parse_args()
+    globals()["DELAY"] = max(0.0, a.delay)
+    try:
+        return run(a)
+    except Challenged as e:
+        print(f"CHALLENGED: Cloudflare/403 blocked the check, stopped early. {e}")
+        print("SUMMARY: 1 fail (challenged), 0 warn")
+        return 3
 
+
+def run(a):
     base = a.base.rstrip("/")
     if not base.startswith("http"):
         base = "https://" + base
