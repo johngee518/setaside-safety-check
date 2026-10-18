@@ -13,7 +13,7 @@ concurrency: { group: safety-check, cancel-in-progress: false }
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 25  # daily crawl covers ~1,230 sitemap pages (10 languages) and takes ~7 min
     steps:
       - name: Decide run type
         id: mode
@@ -35,7 +35,7 @@ jobs:
           echo "" >> safety/report.md; echo "Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> safety/report.md
           cat safety/report.md >> $GITHUB_STEP_SUMMARY
           gh label create safety-alert --color B60205 --description "Automated safety checker failure" 2>/dev/null || true
-          num=$(gh issue list --label safety-alert --state open --json number -q '.[0].number')
+          num=$(gh issue list --label safety-alert --state open --json number,labels -q '[.[] | select(all(.labels[]; .name != "seo"))][0].number')  # SEO issues (label seo) are managed by seo-daily.yml
           if [ "$FAILED" = "true" ]; then
             if [ -n "$num" ]; then gh issue comment "$num" --body-file safety/report.md
             else gh issue create --title "Safety alert: setasidesignal.net" --label safety-alert --body-file safety/report.md; fi

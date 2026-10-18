@@ -1,0 +1,58 @@
+# Daily technical SEO check for setasidesignal.net (stdlib-only scripts/seo_check.py, $0 on a public repo).
+# SITE_URL comes from the repo variable SITE_URL (set to https://setasidesignal.net), with the same value as fallback.
+# Any FAIL opens (or comments on) a "SEO alert" issue labelled safety-alert + seo; a clean run closes it.
+name: seo-daily
+on:
+  schedule:
+    - cron: "17 12 * * *"   # daily 12:17 UTC, after the 11:15 UTC data refresh + deploy
+  workflow_dispatch: {}
+permissions:
+  contents: read
+  issues: write
+concurrency: { group: seo-daily, cancel-in-progress: false }
+jobs:
+  seo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      SITE_URL: ${{ vars.SITE_URL || 'https://setasidesignal.net' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run SEO check
+        id: seo
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          python3 scripts/seo_check.py "$SITE_URL" --max-pages 25 --max-links 150 \
+            --json seo-report.json | tee seo-report.txt
+      - name: Job summary
+        if: always()
+        run: |
+          { echo '```'; cat seo-report.txt 2>/dev/null; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: seo-report
+          path: |
+            seo-report.txt
+            seo-report.json
+          retention-days: 14
+      - name: Open/update or close SEO alert issue
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FAILED: ${{ steps.seo.outcome == 'failure' }}
+        run: |
+          [ -s seo-report.txt ] || echo "SEO check crashed before writing a report" > seo-report.txt
+          { echo "## SEO check $(date -u '+%Y-%m-%d %H:%M UTC') for $SITE_URL"; echo; grep -E '^\s*\[FAIL\]' seo-report.txt || true; echo; echo '<details><summary>Full report</summary>'; echo; echo '```'; cat seo-report.txt; echo '```'; echo '</details>'; echo; echo "Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"; } > seo-issue.md
+          gh label create safety-alert --color B60205 --description "Automated safety checker failure" 2>/dev/null || true
+          gh label create seo --color 1D76DB --description "Daily SEO check" 2>/dev/null || true
+          num=$(gh issue list --label seo --state open --json number -q '.[0].number')
+          if [ "$FAILED" = "true" ]; then
+            if [ -n "$num" ]; then gh issue comment "$num" --body-file seo-issue.md
+            else gh issue create --title "SEO alert: setasidesignal.net" --label safety-alert --label seo --body-file seo-issue.md; fi
+            exit 1
+          elif [ -n "$num" ]; then gh issue close "$num" --comment "SEO check passing again ($(tail -2 seo-report.txt | head -1))."; fi

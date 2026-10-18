@@ -17,3 +17,11 @@ sponsor page text match `safety/baseline.json`.
 **On failure** the run fails and one open `safety-alert` issue is created or updated; it is closed automatically when checks pass again.
 
 If a content change is intentional, regenerate the baseline: `python3 scripts/safety_check.py --write-baseline` and commit `safety/baseline.json`.
+
+## Daily SEO check (`seo-daily`)
+
+`.github/workflows/seo-daily.yml` runs `scripts/seo_check.py` (stdlib only) every day at 12:17 UTC against the repo
+variable `SITE_URL` (https://setasidesignal.net): titles, meta descriptions, canonical, one H1, heading order, noindex,
+JSON-LD, Open Graph/Twitter tags, viewport, lang, favicon, hreflang, real 404 status, broken internal links, host and
+https redirects. Any FAIL opens or updates one `SEO alert` issue (labels `safety-alert` + `seo`) and it closes itself on
+the next clean run. Warnings are reported in the job summary and artifact but do not fail the run.
