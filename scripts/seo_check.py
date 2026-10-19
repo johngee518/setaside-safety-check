@@ -10,13 +10,17 @@ and checks: titles, meta descriptions, canonical, exactly one H1, heading order,
 noindex, JSON-LD validity/types, image alt text, Open Graph/Twitter tags, viewport,
 lang, favicon, hreflang (if present), real 404 status, broken internal links,
 www/apex canonical host, http->https redirect.
+AI-answer checks: structured data has the required fields per type (FAQPage, Article/BlogPosting,
+Product/Offer, BreadcrumbList, Organization, WebSite) and matches visible text (FAQ questions are
+on the page, Offer prices are shown), /llms.txt is present, and robots.txt allows the AI crawlers.
 
 Requests are sequential with DELAY (1.5 s) before each one; the first HTTP 403 or cf-mitigated
 response stops the run at once (exit 3) instead of hammering the site.
 
 Exit code: 0 = no FAIL, 1 = at least one FAIL, 2 = could not run, 3 = Cloudflare challenge/403 (stopped early).
 """
-import argparse, json, re, sys, gzip, time
+import argparse, html as htmlmod, json, re, sys, gzip, time
+import urllib.robotparser
 import urllib.request, urllib.error, urllib.parse
 from html.parser import HTMLParser
 import xml.etree.ElementTree as ET
@@ -127,6 +131,129 @@ class PageParser(HTMLParser):
             if m.get("name", "").lower() == key or m.get("property", "").lower() == key:
                 return m.get("content")
         return None
+
+
+# AI crawlers / answer engines that robots.txt must allow (FAIL if any is disallowed from the site).
+AI_BOTS = ["GPTBot", "OAI-SearchBot", "ChatGPT-User", "ClaudeBot", "PerplexityBot", "Google-Extended", "CCBot", "Applebot-Extended"]
+
+
+def ld_nodes(obj):
+    """Every typed node in a JSON-LD blob (top level, @graph, lists)."""
+    out = []
+    if isinstance(obj, list):
+        for o in obj:
+            out += ld_nodes(o)
+    elif isinstance(obj, dict):
+        if "@graph" in obj:
+            out += ld_nodes(obj["@graph"])
+        if obj.get("@type"):
+            out.append(obj)
+    return out
+
+
+def visible_text(page_html):
+    t = re.sub(r"(?is)<(script|style|noscript|template)\b.*?</\1>", " ", page_html)
+    t = htmlmod.unescape(re.sub(r"<[^>]+>", " ", t))
+    return re.sub(r"\s+", " ", t).strip()
+
+
+def _types(n):
+    t = n.get("@type")
+    return set(map(str, t)) if isinstance(t, list) else {str(t)}
+
+
+def _txt(v):
+    return isinstance(v, str) and v.strip() != ""
+
+
+def check_structured(path, blobs, page_html, rep):
+    """Required fields per schema.org type, plus honesty checks against the visible page. Returns #problems."""
+    vis = visible_text(page_html).lower()
+    bad = 0
+    def fail(msg):
+        nonlocal bad; bad += 1; rep.fail(path, msg)
+    nodes = []
+    for b in blobs:
+        try:
+            nodes += ld_nodes(json.loads(b))
+        except Exception:
+            pass  # invalid JSON is reported by check_page
+    for n in nodes:
+        ty = _types(n)
+        if "FAQPage" in ty:
+            qs = n.get("mainEntity") or []
+            qs = qs if isinstance(qs, list) else [qs]
+            if not qs:
+                fail("FAQPage has no mainEntity questions")
+            for q in qs:
+                name = q.get("name") if isinstance(q, dict) else None
+                ans = q.get("acceptedAnswer") if isinstance(q, dict) else None
+                ans = ans[0] if isinstance(ans, list) and ans else ans
+                if not _txt(name) or not isinstance(ans, dict) or not _txt(ans.get("text")):
+                    fail(f"FAQPage Question missing name or acceptedAnswer.text: {str(name)[:60]!r}")
+                elif re.sub(r"\s+", " ", name).strip().lower() not in vis:
+                    fail(f"FAQPage question not visible on the page: {name[:70]!r}")
+        if ty & {"Article", "BlogPosting", "NewsArticle"}:
+            for k in ("headline", "datePublished"):
+                if not _txt(n.get(k)):
+                    fail(f"{'/'.join(sorted(ty))} missing {k}")
+            au = n.get("author")
+            au = au[0] if isinstance(au, list) and au else au
+            if not (isinstance(au, dict) and (_txt(au.get("name")) or _txt(au.get("@id")))):
+                fail(f"{'/'.join(sorted(ty))} missing author name")
+            if not n.get("image"):
+                rep.warn(path, f"{'/'.join(sorted(ty))} has no image")
+        if "Product" in ty:
+            if not _txt(n.get("name")):
+                fail("Product missing name")
+            offers = n.get("offers")
+            offers = offers if isinstance(offers, list) else [offers] if offers else []
+            if not offers:
+                fail(f"Product {n.get('name')!r} has no offers")
+            for o in offers:
+                price, cur = str((o or {}).get("price", "")).strip(), (o or {}).get("priceCurrency")
+                if not price or not _txt(cur):
+                    fail(f"Offer for {n.get('name')!r} missing price or priceCurrency")
+                    continue
+                try:
+                    amt = float(price)
+                except ValueError:
+                    fail(f"Offer price not numeric: {price!r}"); continue
+                shown = f"${amt:,.0f}" if amt == int(amt) else f"${amt:,.2f}"
+                if cur == "USD" and shown.lower() not in vis:
+                    fail(f"Offer price {shown} for {n.get('name')!r} is not shown on the page")
+        if "BreadcrumbList" in ty:
+            items = n.get("itemListElement") or []
+            if not items or any(not (isinstance(i, dict) and i.get("position") and _txt(i.get("name")) and _txt(i.get("item"))) for i in items):
+                fail("BreadcrumbList item missing position, name or item")
+        if ty & {"Organization", "WebSite"}:
+            for k in ("name", "url"):
+                if not _txt(n.get(k)):
+                    fail(f"{'/'.join(sorted(ty & {'Organization', 'WebSite'}))} missing {k}")
+    return bad
+
+
+def check_ai_robots(body, host, rep):
+    rp = urllib.robotparser.RobotFileParser()
+    rp.parse(body.splitlines())
+    blocked = [b for b in AI_BOTS if not (rp.can_fetch(b, f"https://{host}/") and rp.can_fetch(b, f"https://{host}/guides/"))]
+    if blocked:
+        rep.fail("robots.txt", f"blocks AI crawlers: {', '.join(blocked)}")
+    else:
+        rep.ok("robots.txt", f"allows AI crawlers ({', '.join(AI_BOTS)})")
+    return blocked
+
+
+def check_llms(r, rep):
+    body = (r.get("body") or "") if r.get("status") == 200 else ""
+    links = re.findall(r"\]\((https?://[^)\s]+)\)", body)
+    if r.get("status") != 200:
+        rep.fail("llms.txt", f"/llms.txt returned {r.get('status') or r.get('error')}")
+    elif not body.lstrip().startswith("# ") or not re.search(r"(?m)^> \S", body) or len(links) < 3:
+        rep.fail("llms.txt", "present but not in llms.txt format (needs '# Title', a '> summary' line and links)")
+    else:
+        ctype = (r.get("headers") or {}).get("Content-Type", "") if r.get("headers") else ""
+        (rep.ok if ctype.startswith(("text/plain", "text/markdown")) else rep.warn)("llms.txt", f"present ({len(body)} bytes, {len(links)} links, {ctype or 'no content-type'})")
 
 
 def ld_types(obj, out):
@@ -258,6 +385,7 @@ def check_page(url, base_host, rep, timeout, all_titles, all_descs, link_targets
         except Exception as e:
             rep.fail(path, f"invalid JSON-LD: {e}")
     info["jsonld"] = types
+    info["ld_problems"] = check_structured(path, p.jsonld, r["body"], rep)
     if not p.jsonld:
         rep.warn(path, "no JSON-LD structured data")
     if re.search(r"/(blog|news|posts?|articles?)/(?!category/|tag/|page/)[^/]+", path) and not any(
@@ -311,6 +439,7 @@ def main():
     ap.add_argument("--timeout", type=int, default=15)
     ap.add_argument("--json", help="write full results to this JSON file")
     ap.add_argument("--warn-only", action="store_true", help="always exit 0")
+    ap.add_argument("--key-pages", default="", help="comma-separated paths always checked (e.g. /,/sponsor/)")
     ap.add_argument("--skip-http", action="store_true", help="skip the http:// -> https:// check (port 80 blocked)")
     ap.add_argument("--delay", type=float, default=DELAY, help="seconds to wait before each request (default 1.5)")
     a = ap.parse_args()
@@ -379,6 +508,9 @@ def run(a):
                     blocks.append(val)
         if blocks:
             rep.ok("robots.txt", "disallows: " + ", ".join(blocks))
+        check_ai_robots(body, host, rep)
+    check_llms(fetch(f"https://{host}/llms.txt", a.timeout), rep)
+    if rb["status"] == 200:
         if not sitemaps:
             rep.warn("robots.txt", "no Sitemap: line")
     if not sitemaps:
@@ -419,6 +551,10 @@ def run(a):
                 sample.append(g[i])
         i += 1
     titles, descs, targets, pages = {}, {}, set(), []
+    for kp in [x.strip() for x in a.key_pages.split(",") if x.strip()]:
+        ku = f"https://{host}{kp if kp.startswith('/') else '/' + kp}"
+        if ku not in sample:
+            sample.append(ku)
     for u in sample:
         info = check_page(u, host, rep, a.timeout, titles, descs, targets)
         if info:

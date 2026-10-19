@@ -24,8 +24,11 @@ jobs:
         continue-on-error: true
         run: |
           set -o pipefail
+          # checker self-tests first (cdn-cgi email-protection skip, structured-data / llms.txt / AI-robots checks)
+          python3 -m unittest discover -s tests 2>&1 | tee seo-report.txt
           python3 scripts/seo_check.py "$SITE_URL" --max-pages 25 --max-links 150 --delay 1.5 \
-            --json seo-report.json | tee seo-report.txt
+            --key-pages /,/sponsor/,/guides/free-ways-to-find-set-aside-contracts/,/guides/what-is-a-small-business-set-aside/,/set-aside/small-business-set-aside-total/ \
+            --json seo-report.json | tee -a seo-report.txt
       - name: Job summary
         if: always()
         run: |

@@ -14,7 +14,10 @@ KIT_FORM = "10050814"
 ALLOW_DOMAINS = {"setasidesignal.net", "sam.gov", "buy.stripe.com", "app.kit.com", "kit.com", "adssettings.google.com",
                  "policies.google.com", "static.cloudflareinsights.com", "schema.org", "www.w3.org", "fonts.googleapis.com",
                  "fonts.gstatic.com", "certifications.sba.gov", "maps.certify.sba.gov", "www.acquisition.gov", "www.apexaccelerators.us", "www.gsa.gov", "pagead2.googlesyndication.com", "www.sba.gov", "sba.gov", "www.google.com",
-                 "developers.google.com"}  # Google API Services User Data Policy link (privacy page, accounts section)
+                 "developers.google.com",
+                 # official .gov sources cited by the free-ways guide + FAQ answers (Oct 2026 AI-answer work)
+                 "subnet.sba.gov", "search.certifications.sba.gov", "acquisitiongateway.gov", "www.dibbs.bsm.dla.mil",
+                 "www.ebuy.gsa.gov", "www.usaspending.gov"}  # Google API Services User Data Policy link (privacy page, accounts section)
 HEADERS = {"content-security-policy": None, "strict-transport-security": None, "x-content-type-options": "nosniff",
            "referrer-policy": None, "permissions-policy": None}
 UA = {"User-Agent": "SetAsideSignal-SafetyCheck/1.0 (+https://setasidesignal.net)"}
@@ -35,6 +38,10 @@ class Links(HTMLParser):
     def handle_starttag(s, tag, attrs):
         for k, v in attrs:
             if k in ("href", "src", "action") and v: s.urls.append(v)
+
+def skip_internal(path):
+    """Cloudflare-generated paths: /cdn-cgi/l/email-protection#... (Email Obfuscation, kept ON) and other /cdn-cgi/ helpers are never 'broken links'."""
+    return path.startswith("/cdn-cgi/")
 
 def links(html):
     p = Links(); p.feed(html); return p.urls
@@ -161,7 +168,7 @@ def check_outbound(b, full):
             st2, _, _, _ = get(u)
             if st2 == 0 or st2 in (404, 410) or st2 >= 500: broken.append(f"{u} ({st2})")
     for p in sorted(internal):
-        if p.startswith("/cdn-cgi/"): continue
+        if skip_internal(p): continue
         st, _, _, _ = get(SITE + p, "HEAD")
         if st in (404, 410) or st >= 500 or st == 0: broken.append(f"{SITE}{p} ({st})")
     (fails.append("Broken links: " + "; ".join(broken)) if broken
