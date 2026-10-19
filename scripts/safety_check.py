@@ -77,11 +77,23 @@ def check_safebrowsing():
     except Exception as e:
         warns.append(f"Google Safe Browsing check unavailable (HTTP {st}): {e}")
 
+def _cf_decode(hexs):
+    """Decode Cloudflare Email Obfuscation (data-cfemail / #hex): first byte is the XOR key."""
+    try:
+        k = int(hexs[:2], 16)
+        return "".join(chr(int(hexs[i:i + 2], 16) ^ k) for i in range(2, len(hexs), 2))
+    except ValueError:
+        return ""
+
 def norm_terms(t):
+    # Cloudflare's zone-level Email Obfuscation rewrites addresses at the edge to "[email protected]" links;
+    # decode them back so the hash tracks the real address (a changed email is still detected) whether it is on or off.
+    t = re.sub(r'<[a-z]+[^>]*data-cfemail="([0-9a-fA-F]+)"[^>]*>.*?</[a-z]+>', lambda m: _cf_decode(m.group(1)), t, flags=re.S)
     t = re.sub(r"<script.*?</script>|<style.*?</style>", "", t, flags=re.S)
     t = re.sub(r"<[^>]+>", " ", t)
     t = re.sub(r"\d{4}-\d\d-\d\d[ T]\d\d:\d\d(:\d\d)?( ?UTC)?", "", t)  # footer build timestamp changes every deploy
     t = re.sub(r"\d[\d,]*\+ pages", "N+ pages", t)  # growing page count on the sponsor page
+    t = t.replace("CSV extract (local copy)", "CSV extract")  # build provenance label (box build vs CI build), not content
     t = re.sub(r"(Last updated|Updated|Effective)[^.]{0,40}\d{4}", "", t, flags=re.I)
     return re.sub(r"\s+", " ", t).strip()
 
