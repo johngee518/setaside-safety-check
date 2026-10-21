@@ -11,7 +11,7 @@ HOST = "setasidesignal.net"
 PAGES = ["/", "/sponsor/", "/terms/", "/privacy/", "/agencies/", "/state/", "/offline", "/data.json", "/sw.js", "/manifest.webmanifest", "/sitemap.xml"]
 STRIPE_IDS = {"6oU5kD9O3gXnaPa1Sn0ZW03", "aFacN5d0f9uV6yU68D0ZW0a", "eVq5kDd0fePf3mI1Sn0ZW06", "eVqbJ12lB8qR1eAeF90ZW09"}
 KIT_FORM = "10050814"
-ALLOW_DOMAINS = {"setasidesignal.net", "sam.gov", "buy.stripe.com", "app.kit.com", "kit.com", "adssettings.google.com",
+ALLOW_DOMAINS = {"setasidesignal.net", "govdirections.com", "www.govpillar.com", "sam.gov", "buy.stripe.com", "app.kit.com", "kit.com", "adssettings.google.com",
                  "policies.google.com", "static.cloudflareinsights.com", "schema.org", "www.w3.org", "fonts.googleapis.com",
                  "fonts.gstatic.com", "certifications.sba.gov", "maps.certify.sba.gov", "www.acquisition.gov", "www.apexaccelerators.us", "www.gsa.gov", "pagead2.googlesyndication.com", "www.sba.gov", "sba.gov", "www.google.com",
                  "developers.google.com",
