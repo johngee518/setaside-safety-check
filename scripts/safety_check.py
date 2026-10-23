@@ -17,7 +17,9 @@ ALLOW_DOMAINS = {"setasidesignal.net", "govdirections.com", "www.govpillar.com",
                  "developers.google.com",
                  # official .gov sources cited by the free-ways guide + FAQ answers (Oct 2026 AI-answer work)
                  "subnet.sba.gov", "search.certifications.sba.gov", "acquisitiongateway.gov", "www.dibbs.bsm.dla.mil",
-                 "www.ebuy.gsa.gov", "www.usaspending.gov"}  # Google API Services User Data Policy link (privacy page, accounts section)
+                 "www.ebuy.gsa.gov", "www.usaspending.gov",
+                 # AdSense loader + serving hosts (site verification, Oct 22 2026; matches the site CSP)
+                 "tpc.googlesyndication.com", "googleads.g.doubleclick.net", "adservice.google.com", "fundingchoicesmessages.google.com"}  # Google API Services User Data Policy link (privacy page, accounts section)
 HEADERS = {"content-security-policy": None, "strict-transport-security": None, "x-content-type-options": "nosniff",
            "referrer-policy": None, "permissions-policy": None}
 UA = {"User-Agent": "SetAsideSignal-SafetyCheck/1.0 (+https://setasidesignal.net)"}

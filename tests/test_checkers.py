@@ -64,5 +64,16 @@ class AiAnswerChecks(unittest.TestCase):
         r = Rep(); self.assertEqual(seo.check_structured("/", [json.dumps(ld)], page, r), 0, r.items)
         r = Rep(); self.assertGreaterEqual(seo.check_structured("/", [json.dumps(ld)], "<p>nothing visible</p>", r), 2)  # hidden FAQ + unshown price
 
+class AdSenseLoader(unittest.TestCase):
+    LOADER = '<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7426783216892674" crossorigin="anonymous"></script>'
+    def test_loader_and_ad_hosts_on_allowlist(self):
+        hosts = {urllib.parse.urlparse(u).hostname for u in sc.links(self.LOADER)}
+        self.assertEqual(hosts, {"pagead2.googlesyndication.com"})
+        self.assertTrue(hosts <= sc.ALLOW_DOMAINS)
+        for h in ("tpc.googlesyndication.com", "googleads.g.doubleclick.net", "adservice.google.com", "fundingchoicesmessages.google.com"):
+            self.assertIn(h, sc.ALLOW_DOMAINS)
+    def test_unknown_script_host_still_not_allowed(self):
+        self.assertNotIn("evil.example.com", sc.ALLOW_DOMAINS)
+
 if __name__ == "__main__":
     unittest.main()
