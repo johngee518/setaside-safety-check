@@ -17,7 +17,6 @@
     "$525",
     "$599",
     "$60",
-    "$60,",
     "$600",
     "$65",
     "$655",
@@ -37,7 +36,7 @@
   "kit_forms": [
     "10050814"
   ],
-  "terms_sha256": "f936d7015489fbabaf19d25ff7476120e01f1b1c66587800bf9d78247c97e146",
-  "privacy_sha256": "540b9e5e7a95b5697197ac236e1348dd97ad7d666cf6e0aab36abad39c1199a2",
-  "sponsor_text_sha256": "510f6b55b6342951591854a541bca2b6bf4c581d942cd996be4050308ec902ea"
+  "terms_sha256": "c39ec7436f21912ab973ffafc76ec97baf50fb2b50f8de2c0c12a412daa2c181",
+  "privacy_sha256": "4427c10563e83bff0021ed77eefd8a9ae2292385be98224f887972371c7e4b1e",
+  "sponsor_text_sha256": "f1b6563f1a2c4c1a65e808c3c2ec033ee89a8efc373306beb42adf5007eb19f3"
 }
