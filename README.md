@@ -8,8 +8,8 @@ Manual run: Actions → SetAside safety check → Run workflow.
 
 **Hourly checks:** key pages return 200; SSL valid and more than 14 days from expiry; security headers (CSP, HSTS,
 X-Content-Type-Options, Referrer-Policy, Permissions-Policy, X-Frame-Options or frame-ancestors) and no stray noindex;
-Google Safe Browsing (keyless transparency-report lookup); Stripe payment links are the expected ones and resolve on
-buy.stripe.com; Kit signup form id unchanged; all outbound domains on an allowlist; sponsor prices, terms, privacy and
+Google Safe Browsing (keyless transparency-report lookup); no Stripe payment links on the site (sponsors removed
+Oct 2026); Kit signup form id unchanged; all outbound domains on an allowlist; sponsor prices, terms, privacy and
 sponsor page text match `safety/baseline.json`.
 
 **Daily full check:** every sitemap page returns 200 and outbound/internal links are not broken.

@@ -9,9 +9,9 @@ from html.parser import HTMLParser
 SITE = "https://setasidesignal.net"
 HOST = "setasidesignal.net"
 PAGES = ["/", "/sponsor/", "/terms/", "/privacy/", "/agencies/", "/state/", "/offline", "/data.json", "/sw.js", "/manifest.webmanifest", "/sitemap.xml"]
-STRIPE_IDS = {"6oU5kD9O3gXnaPa1Sn0ZW03", "aFacN5d0f9uV6yU68D0ZW0a", "eVq5kDd0fePf3mI1Sn0ZW06", "eVqbJ12lB8qR1eAeF90ZW09"}
+STRIPE_IDS = set()  # sponsors removed Oct 2026: any Stripe payment link on the site is now unexpected
 KIT_FORM = "10050814"
-ALLOW_DOMAINS = {"setasidesignal.net", "govdirections.com", "www.govpillar.com", "sam.gov", "www.fsd.gov", "buy.stripe.com", "app.kit.com", "kit.com", "adssettings.google.com",
+ALLOW_DOMAINS = {"setasidesignal.net", "govdirections.com", "www.govpillar.com", "sam.gov", "www.fsd.gov", "app.kit.com", "kit.com", "adssettings.google.com",
                  "policies.google.com", "www.aboutads.info", "static.cloudflareinsights.com", "schema.org", "www.w3.org", "fonts.googleapis.com",
                  "fonts.gstatic.com", "certifications.sba.gov", "maps.certify.sba.gov", "www.acquisition.gov", "www.apexaccelerators.us", "www.gsa.gov", "pagead2.googlesyndication.com", "www.sba.gov", "sba.gov", "www.google.com",
                  "developers.google.com",
@@ -122,22 +122,14 @@ def check_changes(b):
     fp = fingerprints(b)
     ids = {u.rsplit("/", 1)[1] for u in fp["stripe_links"]}
     if ids - STRIPE_IDS: fails.append(f"Unexpected Stripe payment link IDs: {sorted(ids - STRIPE_IDS)}")
-    if not ids: fails.append("No Stripe payment links found on site")
     if fp["kit_forms"] != [KIT_FORM]: fails.append(f"Kit form ids changed: {fp['kit_forms']} (expected {KIT_FORM})")
     try: base = json.load(open("safety/baseline.json"))
     except Exception: warns.append("No baseline yet"); return fp
     diff = [k for k in base if base[k] != fp.get(k)]
     (fails.append("Key content changed vs baseline: " + ", ".join(f"{k} (was {base[k]}, now {fp.get(k)})" if not k.endswith("sha256") else k for k in diff)
                   + ". If intended, regenerate safety/baseline.json (python3 scripts/safety_check.py --write-baseline).")
-     if diff else oks.append("Key content (prices, Stripe links, Kit form, terms, privacy, sponsor text) matches baseline"))
+     if diff else oks.append("Key content (prices, no Stripe links, Kit form, terms, privacy, sponsor text) matches baseline"))
     return fp
-
-def check_stripe_resolve(b):
-    for u in sorted(set(re.findall(r"https://buy\.stripe\.com/[A-Za-z0-9_]+", b.get("/sponsor/", "")))):
-        st, _, _, final = get(u)
-        if urllib.parse.urlparse(final).hostname != "buy.stripe.com" or st != 200:
-            fails.append(f"Stripe link {u} -> {final} (HTTP {st})")
-    oks.append("Stripe payment links resolve on buy.stripe.com") if not any("Stripe link" in f for f in fails) else None
 
 def check_outbound(b, full):
     pages = dict(b)
@@ -181,7 +173,7 @@ def main():
     b = check_pages()
     if "--write-baseline" in sys.argv:
         json.dump(fingerprints(b), open("safety/baseline.json", "w"), indent=2); print("baseline written"); return
-    check_ssl(); check_headers(); check_safebrowsing(); check_changes(b); check_stripe_resolve(b); check_outbound(b, full)
+    check_ssl(); check_headers(); check_safebrowsing(); check_changes(b); check_outbound(b, full)
     now = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None).strftime("%Y-%m-%d %H:%M UTC")
     rep = [f"## Safety check {now} ({'daily full' if full else 'hourly'})", ""]
     rep += [f"- ❌ {x}" for x in fails] + [f"- ⚠️ {x}" for x in warns] + [f"- ✅ {x}" for x in oks]
